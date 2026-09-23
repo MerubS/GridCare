@@ -1,0 +1,16 @@
+# Secrets
+.env
+*.pem
+client.properties
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
