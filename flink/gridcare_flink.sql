@@ -64,40 +64,47 @@ AND w.window_end   = g.window_end;
 --      ALTER TABLE households SET ('changelog.mode' = 'append');
 -- ---------------------------------------------------------------------
 CREATE TABLE gridcare_alerts AS
-SELECT
-  h.household_id,
-  u.meter_id,
-  u.zip,
-  u.window_start,
-  u.window_end,
-  ROUND(u.avg_kw, 3)              AS avg_kw,
-  ROUND(z.max_heat_index_f, 1)    AS heat_index_f,
-  h.medical_device,
-  h.age_65_plus,
-  h.contact_name,
-  h.contact_phone,
-  CASE WHEN z.outage_minutes > 0
-       THEN 'AREA_OUTAGE'               -- utility: prioritize restoration / cooling center
-       ELSE 'INDIVIDUAL_COOLING_LOSS'   -- power is on but AC stopped: welfare check
-  END AS alert_type,
-  CASE WHEN h.medical_device <> 'NONE' THEN 'CRITICAL' ELSE 'HIGH' END AS priority,
-  CONCAT(
-    CASE WHEN h.medical_device <> 'NONE' THEN 'CRITICAL' ELSE 'HIGH' END,
-    ': household ', h.household_id, ' in ', u.zip,
-    ' using ', CAST(ROUND(u.avg_kw, 2) AS STRING), ' kW at heat index ',
-    CAST(ROUND(z.max_heat_index_f, 0) AS STRING), 'F',
-    CASE WHEN z.outage_minutes > 0 THEN ' (area outage)' ELSE ' (possible AC failure)' END,
-    '. Contact ', h.contact_name, ' ', h.contact_phone
-  ) AS message
-FROM meter_usage_10m u
-JOIN zip_conditions_10m z
-  ON  u.zip = z.zip
-  AND u.window_start = z.window_start
-JOIN households h
-  ON  u.meter_id = h.meter_id
-WHERE h.medical_baseline = TRUE
-  AND z.max_heat_index_f >= 100
-  AND u.avg_kw < 0.3;
+SELECT household_id, meter_id, zip, window_start, window_end, avg_kw, heat_index_f,
+       medical_device, age_65_plus, contact_name, contact_phone, alert_type, priority, message
+FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY household_id ORDER BY window_start ASC) AS rn
+  FROM (
+    SELECT
+      h.household_id,
+      u.meter_id,
+      u.zip,
+      u.window_start,
+      u.window_end,
+      ROUND(u.avg_kw, 3)              AS avg_kw,
+      ROUND(z.max_heat_index_f, 1)    AS heat_index_f,
+      h.medical_device,
+      h.age_65_plus,
+      h.contact_name,
+      h.contact_phone,
+      CASE WHEN z.outage_minutes > 0 THEN 'AREA_OUTAGE' ELSE 'INDIVIDUAL_COOLING_LOSS' END AS alert_type,
+      CASE WHEN h.medical_device <> 'NONE' THEN 'CRITICAL' ELSE 'HIGH' END AS priority,
+      CONCAT(
+        CASE WHEN z.outage_minutes > 0 THEN ':zap: ' ELSE ':thermometer: ' END,
+        '*', CASE WHEN h.medical_device <> 'NONE' THEN 'CRITICAL' ELSE 'HIGH' END, '*',
+        ' alert — household `', h.household_id, '`\n',
+        '*ZIP:* ', u.zip,
+        '   *Usage:* ', CAST(ROUND(u.avg_kw, 2) AS STRING), ' kW',
+        '   *Heat index:* ', CAST(ROUND(z.max_heat_index_f, 0) AS STRING), '°F\n',
+        '*Cause:* ', CASE WHEN z.outage_minutes > 0 THEN 'Area power outage' ELSE 'Possible AC failure (power is on)' END, '\n',
+        '*Medical device:* ', h.medical_device, '   *Age 65+:* ', CAST(h.age_65_plus AS STRING), '\n',
+        '*Contact:* ', h.contact_name, ' — ', h.contact_phone
+      ) AS message
+    FROM meter_usage_10m u
+    JOIN zip_conditions_10m z
+      ON  u.zip = z.zip
+      AND u.window_start = z.window_start
+    JOIN households h
+      ON  u.meter_id = h.meter_id
+    WHERE h.medical_baseline = TRUE
+      AND z.max_heat_index_f >= 100
+      AND u.avg_kw < 0.3
+  )
+) WHERE rn = 1;
 
 -- ---------------------------------------------------------------------
 -- 5) Demo queries (run interactively, no need to persist)
