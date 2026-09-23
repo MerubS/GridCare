@@ -1,30 +1,4 @@
 #!/usr/bin/env python3
-"""
-GridCare simulator
-------------------
-Streams synthetic smart-meter, weather, grid-status, and household data for a
-Houston heat-wave scenario into Confluent Cloud (Avro + Schema Registry).
-
-Scripted events, so the demo always has something to show:
-  * 14:00 sim time  -> power outage in ZIP 77021 until 17:30
-  * 15:00 sim time  -> AC failure in 3 medical-baseline homes outside 77021
-
-Time is compressed: by default 1 simulated minute = 1 real second, so a full
-6 AM -> 10 PM day runs in about 16 minutes.
-
-Setup:
-  pip install -r requirements.txt
-  copy .env.example to .env and fill in your Confluent Cloud keys
-  (the .env file is git-ignored, so your keys never reach GitHub)
-
-Run (from the repo root):
-  python simulator/gridcare_simulator.py --dry-run          # test locally, no Kafka
-  python simulator/gridcare_simulator.py --households 2000  # real run
-
-Re-running: Flink uses event time, so re-sending the same simulated day makes
-the new events "late". For a second run, pass a new date, e.g.
-  python gridcare_simulator.py --sim-date 2026-09-24
-"""
 import argparse
 import json
 import math
