@@ -67,7 +67,7 @@ CREATE TABLE gridcare_alerts AS
 SELECT household_id, meter_id, zip, window_start, window_end, avg_kw, heat_index_f,
        medical_device, age_65_plus, contact_name, contact_phone, alert_type, priority, message
 FROM (
-  SELECT *, ROW_NUMBER() OVER (PARTITION BY household_id ORDER BY window_start ASC) AS rn
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY household_id, CAST(window_start AS DATE) ORDER BY window_start ASC) AS rn
   FROM (
     SELECT
       h.household_id,
