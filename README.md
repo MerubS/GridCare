@@ -178,7 +178,7 @@ Built and tested within Confluent Cloud trial credits. A full day of development
 
 | Stream Lineage | Live alerts |
 |---|---|
-| ![Stream Lineage](docs/screenshots/StreamLineage.png) | ![Alerts](docs/screenshots/Alerts.png) |
+| ![Stream Lineage](docs/screenshots/StreamLineage1.png) ![Stream Lineage](docs/screenshots/StreamLineage2.png)| ![Alerts](docs/screenshots/Alerts.png) |
 
 ## Roadmap
 
